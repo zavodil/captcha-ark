@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::io::{self, Read, Write};
+use std::time::Duration;
+use wasi_http_client::Client;
 
 #[derive(Deserialize)]
 struct Input {
@@ -68,92 +70,93 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-#[cfg(not(target_arch = "wasm32"))]
 fn verify_captcha(input: &Input) -> Result<(bool, Option<String>), Box<dyn std::error::Error>> {
-    use std::time::Duration;
-
-    // Create HTTP client
-    let client = reqwest::blocking::Client::builder()
-        .timeout(Duration::from_secs(35))
-        .build()?;
-
     // Step 1: Request CAPTCHA challenge from launchpad
     let challenge_url = format!("{}/api/captcha/challenge", input.launchpad_url);
 
-    let challenge_response = client
+    let challenge_body = serde_json::json!({
+        "session_id": input.session_id,
+        "buyer": input.buyer,
+        "amount": input.amount
+    });
+
+    eprintln!("📤 Creating CAPTCHA challenge...");
+    let challenge_response = Client::new()
         .post(&challenge_url)
-        .json(&serde_json::json!({
-            "session_id": input.session_id,
-            "buyer": input.buyer,
-            "amount": input.amount
-        }))
+        .header("Content-Type", "application/json")
+        .connect_timeout(Duration::from_secs(10))
+        .body(serde_json::to_string(&challenge_body)?.as_bytes())
         .send()?;
 
-    if !challenge_response.status().is_success() {
-        return Err(format!("Failed to create challenge: HTTP {}", challenge_response.status()).into());
+    // Check response status
+    let status = challenge_response.status();
+    if status < 200 || status >= 300 {
+        match challenge_response.body() {
+            Ok(body_bytes) => {
+                let error_text = String::from_utf8_lossy(&body_bytes);
+                return Err(format!("Failed to create challenge. Status: {}. Details: {}", status, error_text).into());
+            }
+            Err(e) => {
+                return Err(format!("Failed to create challenge. Status: {}. Failed to read body: {:?}", status, e).into());
+            }
+        }
     }
 
-    let challenge: ChallengeResponse = challenge_response.json()?;
+    // Parse response
+    let response_body = challenge_response.body()?;
+    let challenge_data: ChallengeResponse = serde_json::from_slice(&response_body)?;
 
     // Step 2: Long-polling for user's CAPTCHA solution
-    // Instead of polling every 500ms, make ONE request with 60 second timeout
     // Backend will hold the connection open until user solves or timeout
-    let wait_url = format!("{}/api/captcha/wait/{}?timeout=60", input.launchpad_url, challenge.challenge_id);
+    let wait_url = format!("{}/api/captcha/wait/{}?timeout=60", input.launchpad_url, challenge_data.challenge_id);
 
     eprintln!("⏳ Waiting for user to solve CAPTCHA (60s timeout)...");
 
-    let verify_response = client
+    let verify_response = Client::new()
         .get(&wait_url)
-        .timeout(Duration::from_secs(65)) // Slightly longer than backend timeout
+        .connect_timeout(Duration::from_secs(65)) // Slightly longer than backend timeout
         .send()?;
 
-    if !verify_response.status().is_success() {
-        return Err(format!("Failed to get verification result: HTTP {}", verify_response.status()).into());
+    // Check response status
+    let status = verify_response.status();
+    if status < 200 || status >= 300 {
+        match verify_response.body() {
+            Ok(body_bytes) => {
+                let error_text = String::from_utf8_lossy(&body_bytes);
+                return Err(format!("Failed to verify CAPTCHA. Status: {}. Details: {}", status, error_text).into());
+            }
+            Err(e) => {
+                return Err(format!("Failed to verify CAPTCHA. Status: {}. Failed to read body: {:?}", status, e).into());
+            }
+        }
     }
 
-    let verify: VerifyResponse = verify_response.json()?;
+    // Parse response
+    let verify_body = verify_response.body()?;
+    let verify_data: VerifyResponse = serde_json::from_slice(&verify_body)?;
 
-    match verify.status.as_str() {
+    match verify_data.status.as_str() {
         "solved" => {
-            if verify.verified {
+            if verify_data.verified {
                 eprintln!("✅ CAPTCHA verified successfully!");
-                return Ok((true, None));
+                Ok((true, None))
             } else {
                 eprintln!("❌ CAPTCHA verification failed (wrong answer)");
-                return Ok((false, Some("wrong_answer".to_string())));
+                Ok((false, Some("wrong_answer".to_string())))
             }
         }
         "timeout" => {
             eprintln!("⏱️  CAPTCHA timeout - user didn't solve in time");
-            return Ok((false, Some("timeout".to_string())));
+            Ok((false, Some("timeout".to_string())))
         }
         "pending" => {
             // Long-polling timed out but challenge still pending
-            // Retry once more
-            eprintln!("⏳ Long-poll timeout, checking one more time...");
-            std::thread::sleep(Duration::from_millis(500));
-
-            let retry_url = format!("{}/api/captcha/verify/{}", input.launchpad_url, challenge.challenge_id);
-            let retry_response = client.get(&retry_url).send()?;
-
-            if retry_response.status().is_success() {
-                let retry_verify: VerifyResponse = retry_response.json()?;
-                if retry_verify.status == "solved" {
-                    return Ok((retry_verify.verified, if !retry_verify.verified { Some("wrong_answer".to_string()) } else { None }));
-                }
-            }
-
-            return Ok((false, Some("timeout".to_string())));
+            eprintln!("⏳ Long-poll timeout, treating as timeout");
+            Ok((false, Some("timeout".to_string())))
         }
         _ => {
-            eprintln!("❌ Unknown status: {}", verify.status);
-            return Ok((false, Some("system_error".to_string())));
+            eprintln!("❌ Unknown status: {}", verify_data.status);
+            Ok((false, Some("system_error".to_string())))
         }
     }
-}
-
-// WASM stub - for compilation only
-#[cfg(target_arch = "wasm32")]
-fn verify_captcha(_input: &Input) -> Result<(bool, Option<String>), Box<dyn std::error::Error>> {
-    Err("Not implemented for WASM target".into())
 }

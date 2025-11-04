@@ -140,7 +140,7 @@ impl TokenSaleContract {
         let code_source = near_sdk::serde_json::json!({
             "repo": "https://github.com/zavodil/captcha-ark",
             "commit": "main",
-            "build_target": "wasm32-wasip1"
+            "build_target": "wasm32-wasip2"
         });
 
         let resource_limits = near_sdk::serde_json::json!({

@@ -128,7 +128,7 @@ Single-page application with NEAR Wallet integration and hCaptcha.
 
 ### Prerequisites
 
-- Rust toolchain with `wasm32-wasip1` target
+- Rust toolchain with `wasm32-wasip2` target
 - Node.js 18+
 - NEAR CLI
 - Running OutLayer coordinator (optional for local testing)
@@ -139,12 +139,12 @@ Single-page application with NEAR Wallet integration and hCaptcha.
 cd wasi-examples/captcha-ark
 
 # Add WASM target
-rustup target add wasm32-wasip1
+rustup target add wasm32-wasip2
 
 # Build
-cargo build --target wasm32-wasip1 --release
+cargo build --target wasm32-wasip2 --release
 
-# Output: target/wasm32-wasip1/release/captcha-ark.wasm
+# Output: target/wasm32-wasip2/release/captcha-ark.wasm (~459KB)
 ```
 
 ### 2. Deploy Token Sale Contract
@@ -297,7 +297,7 @@ Update `code_source.repo` in contract to point to your GitHub repo:
 let code_source = near_sdk::serde_json::json!({
     "repo": "https://github.com/YOUR_USERNAME/YOUR_REPO",
     "commit": "main",
-    "build_target": "wasm32-wasip1"
+    "build_target": "wasm32-wasip2"
 });
 ```
 
@@ -476,9 +476,9 @@ near view tokensale.testnet get_launchpad_url
 
 **Problem**: Built for wrong target
 
-**Solution**: Must use `wasm32-wasip1`:
+**Solution**: Must use `wasm32-wasip2`:
 ```bash
-cargo build --target wasm32-wasip1 --release
+cargo build --target wasm32-wasip2 --release
 ```
 
 ## 📚 Learn More

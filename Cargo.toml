@@ -10,7 +10,7 @@ path = "src/main.rs"
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json"] }
+wasi-http-client = "0.2"
 
 [profile.release]
 opt-level = "z"
