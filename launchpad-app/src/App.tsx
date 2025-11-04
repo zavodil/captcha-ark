@@ -3,7 +3,6 @@ import { setupWalletSelector } from '@near-wallet-selector/core';
 import { setupMyNearWallet } from '@near-wallet-selector/my-near-wallet';
 import { setupModal } from '@near-wallet-selector/modal-ui';
 import type { WalletSelector, AccountState } from '@near-wallet-selector/core';
-import { transactions } from 'near-api-js';
 import '@near-wallet-selector/modal-ui/styles.css';
 import './App.css';
 
@@ -13,12 +12,6 @@ declare global {
   }
 }
 
-interface SessionData {
-  session_id: string;
-  hcaptcha_site_key: string;
-  contract_id: string;
-  network: string;
-}
 
 // Generate random session ID
 const generateSessionId = () => {
@@ -28,7 +21,7 @@ const generateSessionId = () => {
 function App() {
   const [selector, setSelector] = useState<WalletSelector | null>(null);
   const [accountId, setAccountId] = useState<string | null>(null);
-  const [sessionId, setSessionId] = useState<string>(generateSessionId());
+  const [sessionId] = useState<string>(generateSessionId());
   const contractId = process.env.REACT_APP_CONTRACT_ID || 'tokensale.testnet';
   const network = process.env.REACT_APP_NEAR_NETWORK || 'testnet';
   const apiBaseUrl = process.env.REACT_APP_API_BASE_URL || 'https://launchpad.nearspace.info/api';
@@ -207,19 +200,19 @@ function App() {
       const outlayerFee = 0.1;
       const totalDeposit = purchaseAmount + outlayerFee;
 
-      // Convert NEAR to yoctoNEAR (1 NEAR = 10^24 yoctoNEAR)
-      const depositYocto = BigInt(Math.floor(totalDeposit * 1e24));
-
+      // Wallet Selector transaction format
       await wallet.signAndSendTransaction({
-        signerId: accountId,
         receiverId: contractId,
         actions: [
-          transactions.functionCall(
-            'buy_tokens',
-            { session_id: sessionId },
-            BigInt('300000000000000'),
-            depositYocto
-          ),
+          {
+            type: 'FunctionCall',
+            params: {
+              methodName: 'buy_tokens',
+              args: { session_id: sessionId },
+              gas: '300000000000000',
+              deposit: (totalDeposit * 1e24).toString(),
+            },
+          } as any,
         ],
       });
 
@@ -276,29 +269,6 @@ function App() {
           </div>
         </div>
 
-        <div className="input-group">
-          <label htmlFor="session-id">Your Session ID</label>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <input
-              type="text"
-              id="session-id"
-              value={sessionId}
-              onChange={(e) => setSessionId(e.target.value)}
-              style={{ flex: 1 }}
-              placeholder="sess_..."
-            />
-            <button
-              className="btn btn-green"
-              onClick={() => setSessionId(generateSessionId())}
-              style={{ whiteSpace: 'nowrap' }}
-            >
-              🎲 New
-            </button>
-          </div>
-          <small style={{ color: '#999', fontSize: '12px' }}>
-            Session ID is used to match your transaction with CAPTCHA. Keep it unique per purchase.
-          </small>
-        </div>
 
         <div className="input-group">
           <label>Wallet Connection</label>
