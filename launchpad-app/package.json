@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@near-js/transactions": "^2.5.0",
     "@near-wallet-selector/core": "^10.1.0",
     "@near-wallet-selector/modal-ui": "^10.1.0",
     "@near-wallet-selector/my-near-wallet": "^10.1.0",

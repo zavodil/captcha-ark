@@ -3,6 +3,7 @@ import { setupWalletSelector } from '@near-wallet-selector/core';
 import { setupMyNearWallet } from '@near-wallet-selector/my-near-wallet';
 import { setupModal } from '@near-wallet-selector/modal-ui';
 import type { WalletSelector, AccountState } from '@near-wallet-selector/core';
+import { actionCreators } from '@near-js/transactions';
 import '@near-wallet-selector/modal-ui/styles.css';
 import './App.css';
 
@@ -26,7 +27,7 @@ function App() {
   const network = process.env.REACT_APP_NEAR_NETWORK || 'testnet';
   const apiBaseUrl = process.env.REACT_APP_API_BASE_URL || 'https://launchpad.nearspace.info/api';
   const [hcaptchaSiteKey, setHcaptchaSiteKey] = useState<string>('');
-  const [amount, setAmount] = useState<string>('1');
+  const [amount, setAmount] = useState<string>('0.0000001');
   const [status, setStatus] = useState<{ message: string; type: string } | null>(null);
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [currentChallengeId, setCurrentChallengeId] = useState<string | null>(null);
@@ -200,20 +201,18 @@ function App() {
       const outlayerFee = 0.1;
       const totalDeposit = purchaseAmount + outlayerFee;
 
-      // Wallet Selector transaction format
+      // Create action using actionCreators (same as dashboard)
+      const action = actionCreators.functionCall(
+        'buy_tokens',
+        { session_id: sessionId },
+        BigInt('300000000000000'), // 300 TGas
+        BigInt(Math.floor(totalDeposit * 1e24)) // deposit in yoctoNEAR
+      );
+
+      // Send transaction
       await wallet.signAndSendTransaction({
         receiverId: contractId,
-        actions: [
-          {
-            type: 'FunctionCall',
-            params: {
-              methodName: 'buy_tokens',
-              args: { session_id: sessionId },
-              gas: '300000000000000',
-              deposit: (totalDeposit * 1e24).toString(),
-            },
-          } as any,
-        ],
+        actions: [action],
       });
 
       setStatus({ message: 'Transaction sent! Waiting for CAPTCHA challenge...', type: 'info' });
