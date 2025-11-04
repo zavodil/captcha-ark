@@ -24,8 +24,9 @@ function App() {
   const [selector, setSelector] = useState<WalletSelector | null>(null);
   const [accountId, setAccountId] = useState<string | null>(null);
   const [sessionId, setSessionId] = useState<string>('');
-  const [contractId, setContractId] = useState<string>('');
-  const [network, setNetwork] = useState<string>('testnet');
+  const contractId = process.env.REACT_APP_CONTRACT_ID || 'tokensale.testnet';
+  const network = process.env.REACT_APP_NEAR_NETWORK || 'testnet';
+  const apiBaseUrl = process.env.REACT_APP_API_BASE_URL || 'https://launchpad.nearspace.info/api';
   const [hcaptchaSiteKey, setHcaptchaSiteKey] = useState<string>('');
   const [amount, setAmount] = useState<string>('1');
   const [status, setStatus] = useState<{ message: string; type: string } | null>(null);
@@ -34,7 +35,9 @@ function App() {
   const [showCaptchaModal, setShowCaptchaModal] = useState(false);
   const [hcaptchaWidgetId, setHcaptchaWidgetId] = useState<string | null>(null);
 
-  const API_URL = window.location.hostname === 'localhost' ? 'http://localhost:3181' : '';
+  const API_URL = window.location.hostname === 'localhost'
+    ? 'http://localhost:3181'
+    : apiBaseUrl;
   const WS_URL = window.location.hostname === 'localhost'
     ? 'ws://localhost:3181'
     : `wss://${window.location.host}`;
@@ -71,11 +74,9 @@ function App() {
       const data: SessionData = await res.json();
       setSessionId(data.session_id);
       setHcaptchaSiteKey(data.hcaptcha_site_key);
-      setContractId(data.contract_id);
-      setNetwork(data.network);
 
-      // Initialize wallet selector
-      await initWalletSelector(data.network);
+      // Initialize wallet selector with env network
+      await initWalletSelector(network);
     } catch (error) {
       console.error('Failed to initialize:', error);
       setStatus({ message: 'Failed to initialize session', type: 'error' });
