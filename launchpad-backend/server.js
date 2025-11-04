@@ -5,6 +5,16 @@ import { WebSocketServer } from 'ws';
 import { v4 as uuidv4 } from 'uuid';
 import { createServer } from 'http';
 import fetch from 'node-fetch';
+import fs from 'fs';
+
+// Debug logging to file
+const DEBUG_LOG = '/tmp/captcha-backend-debug.log';
+function debugLog(message) {
+    const timestamp = new Date().toISOString();
+    const logMessage = `[${timestamp}] ${message}\n`;
+    console.log(logMessage.trim());
+    fs.appendFileSync(DEBUG_LOG, logMessage);
+}
 
 const app = express();
 const PORT = process.env.PORT || 3181;
@@ -17,7 +27,7 @@ const NEAR_NETWORK = process.env.NEAR_NETWORK || 'testnet';
 // Get your keys at: https://www.hcaptcha.com/
 const HCAPTCHA_SITE_KEY = process.env.HCAPTCHA_SITE_KEY || '10000000-ffff-ffff-ffff-000000000001'; // Test key
 const HCAPTCHA_SECRET = process.env.HCAPTCHA_SECRET || '0x0000000000000000000000000000000000000000'; // Test secret
-const HCAPTCHA_VERIFY_URL = 'https://hcaptcha.com/siteverify';
+const HCAPTCHA_VERIFY_URL = 'https://api.hcaptcha.com/siteverify';
 
 // Allowed origins for CORS
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
@@ -90,6 +100,10 @@ wss.on('connection', (ws, req) => {
 // Verify hCaptcha token with hCaptcha API
 async function verifyHCaptchaToken(token, remoteip) {
     try {
+        debugLog(`🔍 Verifying hCaptcha token (length: ${token ? token.length : 0})`);
+        debugLog(`   Using secret: ${HCAPTCHA_SECRET.substring(0, 10)}...`);
+        debugLog(`   Remote IP: ${remoteip || 'not provided'}`);
+
         const response = await fetch(HCAPTCHA_VERIFY_URL, {
             method: 'POST',
             headers: {
@@ -103,9 +117,15 @@ async function verifyHCaptchaToken(token, remoteip) {
         });
 
         const data = await response.json();
+        debugLog(`📊 hCaptcha response: ${JSON.stringify(data)}`);
+
+        if (!data.success) {
+            debugLog(`❌ hCaptcha failed. Error codes: ${JSON.stringify(data['error-codes'])}`);
+        }
+
         return data.success === true;
     } catch (error) {
-        console.error('hCaptcha verification error:', error);
+        debugLog(`❌ hCaptcha verification error: ${error.message}`);
         return false;
     }
 }
@@ -176,6 +196,7 @@ app.get('/api/captcha/wait/:challenge_id', (req, res) => {
 
         // Check if challenge was solved
         if (challenge.status === 'solved') {
+            console.log(`✅ Worker received result for ${challenge_id}: verified=${challenge.verified}`);
             pendingChallenges.delete(challenge_id);
             return res.json({
                 status: 'solved',
