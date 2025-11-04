@@ -198,7 +198,7 @@ function App() {
 
       const wallet = await selector.wallet();
       const purchaseAmount = parseFloat(amount);
-      const outlayerFee = 0.1;
+      const outlayerFee = 0.11; // 0.11 NEAR for OutLayer execution
       const totalDeposit = purchaseAmount + outlayerFee;
 
       // Create action using actionCreators (same as dashboard)
@@ -277,19 +277,22 @@ function App() {
         </div>
 
         <div className="input-group">
-          <label htmlFor="amount">Amount (NEAR)</label>
+          <label htmlFor="amount">Purchase Amount (NEAR)</label>
           <input
             type="number"
             id="amount"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            min="1"
-            step="0.1"
+            min="0.0000001"
+            step="0.0000001"
           />
+          <small style={{ color: '#999', fontSize: '12px', marginTop: '5px' }}>
+            + 0.11 NEAR for OutLayer execution fee (refunded if CAPTCHA fails)
+          </small>
         </div>
 
         <button className="btn" onClick={handleBuyTokens} disabled={!accountId}>
-          Buy Tokens
+          Buy Tokens (Total: {(parseFloat(amount) + 0.11).toFixed(8)} NEAR)
         </button>
 
         {status && (

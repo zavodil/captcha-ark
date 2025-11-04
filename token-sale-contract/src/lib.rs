@@ -4,8 +4,8 @@ use near_sdk::serde::{Deserialize, Serialize};
 use schemars::JsonSchema;
 use near_sdk::{env, ext_contract, log, near_bindgen, AccountId, Gas, NearToken, Promise, PromiseError};
 
-/// Minimum purchase amount
-const MIN_PURCHASE: u128 = 1_000_000_000_000_000_000_000_000; // 1 NEAR
+/// Minimum purchase amount (for demo purposes)
+const MIN_PURCHASE: u128 = 100_000_000_000_000_000; // 0.0001 NEAR
 
 /// Tokens per NEAR
 const TOKENS_PER_NEAR: u128 = 100; // 100 tokens per 1 NEAR
@@ -105,11 +105,11 @@ impl TokenSaleContract {
         let buyer = env::predecessor_account_id();
         let total_attached = env::attached_deposit();
 
-        // Minimum: 1 NEAR for tokens + 0.1 NEAR for execution
-        let min_total = MIN_PURCHASE + 100_000_000_000_000_000_000_000; // 1.1 NEAR
+        // Minimum: 0.0001 NEAR for tokens + 0.11 NEAR for execution (demo)
+        let min_total = MIN_PURCHASE + 110_000_000_000_000_000_000_000; // 0.1101 NEAR
         assert!(
             total_attached.as_yoctonear() >= min_total,
-            "Attach at least 1.1 NEAR (1 NEAR for tokens + 0.1 NEAR for execution)"
+            "Attach at least 0.11 NEAR (0.0001 NEAR minimum purchase + 0.11 NEAR for OutLayer execution)"
         );
 
         // Calculate purchase amount (first NEAR goes to tokens, rest to execution)
@@ -138,7 +138,7 @@ impl TokenSaleContract {
 
         // Hardcoded parameters for captcha-ark
         let code_source = near_sdk::serde_json::json!({
-            "repo": "https://github.com/zavodol/captcha-ark",
+            "repo": "https://github.com/zavodil/captcha-ark",
             "commit": "main",
             "build_target": "wasm32-wasip1"
         });
