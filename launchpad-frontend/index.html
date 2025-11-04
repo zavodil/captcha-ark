@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Token Sale Launchpad - CAPTCHA Demo</title>
+    <script src="https://js.hcaptcha.com/1/api.js" async defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/near-api-js@3.0.4/dist/near-api-js.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@near-wallet-selector/core@8.9.3/lib/index.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@near-wallet-selector/my-near-wallet@8.9.3/lib/index.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@near-wallet-selector/modal-ui@8.9.3/lib/index.umd.min.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@near-wallet-selector/modal-ui@8.9.3/styles.css">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 32px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        .stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .stat-box {
+            background: #f7fafc;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        .stat-label {
+            color: #718096;
+            font-size: 12px;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+        .stat-value {
+            color: #2d3748;
+            font-size: 24px;
+            font-weight: bold;
+        }
+        .input-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            color: #4a5568;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        #status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            display: none;
+        }
+        #status.info { background: #ebf8ff; color: #2c5282; display: block; }
+        #status.success { background: #f0fff4; color: #22543d; display: block; }
+        #status.error { background: #fff5f5; color: #742a2a; display: block; }
+
+        /* CAPTCHA Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal.active {
+            display: flex;
+        }
+        .modal-content {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            max-width: 450px;
+            width: 90%;
+            text-align: center;
+        }
+        .modal-content h2 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .modal-content p {
+            color: #718096;
+            margin-bottom: 25px;
+            font-size: 14px;
+        }
+        .captcha-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+            min-height: 78px;
+        }
+        .modal-btn {
+            width: 100%;
+            padding: 15px;
+            background: #48bb78;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .modal-btn:hover {
+            background: #38a169;
+        }
+        .modal-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Token Sale Launchpad</h1>
+        <p class="subtitle">Buy tokens with CAPTCHA verification via NEAR OutLayer</p>
+
+        <div class="stats">
+            <div class="stat-box">
+                <div class="stat-label">Price</div>
+                <div class="stat-value">100 tokens/NEAR</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-label">Your Session</div>
+                <div class="stat-value" id="sessionId">Loading...</div>
+            </div>
+        </div>
+
+        <!-- Wallet Connection -->
+        <div class="input-group">
+            <label>Wallet Connection</label>
+            <button class="btn" id="connectBtn" onclick="connectWallet()" style="background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);">
+                <span id="walletStatus">Connect Wallet</span>
+            </button>
+        </div>
+
+        <div class="input-group">
+            <label for="amount">Amount (NEAR)</label>
+            <input type="number" id="amount" value="1" min="1" step="0.1" required>
+        </div>
+
+        <button class="btn" id="buyBtn" onclick="buyTokens()" disabled>Buy Tokens</button>
+
+        <div id="status"></div>
+    </div>
+
+    <!-- CAPTCHA Modal -->
+    <div class="modal" id="captchaModal">
+        <div class="modal-content">
+            <h2>🔒 Verify You're Human</h2>
+            <p>Complete the CAPTCHA to continue with your token purchase.</p>
+            <div class="captcha-container">
+                <div id="hcaptcha-widget"></div>
+            </div>
+            <button class="modal-btn" id="submitCaptchaBtn" onclick="submitCaptcha()" disabled>Submit Verification</button>
+        </div>
+    </div>
+
+    <script>
+        // Use relative URLs for production, full URL for local dev
+        const API_URL = window.location.hostname === 'localhost'
+            ? 'http://localhost:3181'
+            : '';
+        const WS_URL = window.location.hostname === 'localhost'
+            ? 'ws://localhost:3181'
+            : `wss://${window.location.host}`;
+
+        let sessionId = null;
+        let ws = null;
+        let currentChallengeId = null;
+        let hcaptchaSiteKey = null;
+        let hcaptchaWidgetId = null;
+        let contractId = null;
+        let nearNetwork = null;
+        let selector = null;
+        let wallet = null;
+        let accountId = null;
+
+        // Initialize
+        async function init() {
+            try {
+                // Get session ID, hCaptcha site key, and contract configuration
+                const res = await fetch(`${API_URL}/api/session`, { credentials: 'include' });
+                const data = await res.json();
+                sessionId = data.session_id;
+                hcaptchaSiteKey = data.hcaptcha_site_key;
+                contractId = data.contract_id;
+                nearNetwork = data.network;
+                document.getElementById('sessionId').textContent = sessionId.substring(0, 8) + '...';
+
+                console.log(`Connected to ${contractId} on ${nearNetwork}`);
+
+                // Initialize NEAR Wallet Selector
+                await initWalletSelector();
+
+                // Connect WebSocket
+                connectWebSocket();
+            } catch (error) {
+                showStatus('Failed to initialize: ' + error.message, 'error');
+            }
+        }
+
+        // Initialize NEAR Wallet Selector
+        async function initWalletSelector() {
+            const { setupWalletSelector } = window['@near-wallet-selector/core'];
+            const { setupMyNearWallet } = window['@near-wallet-selector/my-near-wallet'];
+            const { setupModal } = window['@near-wallet-selector/modal-ui'];
+
+            selector = await setupWalletSelector({
+                network: nearNetwork,
+                modules: [setupMyNearWallet()]
+            });
+
+            // Check if already connected
+            const isSignedIn = selector.isSignedIn();
+            if (isSignedIn) {
+                wallet = await selector.wallet();
+                const accounts = await wallet.getAccounts();
+                if (accounts.length > 0) {
+                    accountId = accounts[0].accountId;
+                    updateWalletUI(accountId);
+                }
+            }
+        }
+
+        function updateWalletUI(account) {
+            document.getElementById('walletStatus').textContent = account.substring(0, 20) + '...';
+            document.getElementById('buyBtn').disabled = false;
+        }
+
+        async function connectWallet() {
+            if (accountId) {
+                // Already connected, disconnect
+                if (wallet) {
+                    await wallet.signOut();
+                    accountId = null;
+                    document.getElementById('walletStatus').textContent = 'Connect Wallet';
+                    document.getElementById('buyBtn').disabled = true;
+                }
+                return;
+            }
+
+            // Show wallet selector modal
+            const { setupModal } = window['@near-wallet-selector/modal-ui'];
+            const modal = setupModal(selector, {
+                contractId: contractId
+            });
+
+            modal.show();
+
+            // Wait for wallet connection
+            const subscription = selector.store.observable.subscribe(async (state) => {
+                if (state.accounts.length > 0) {
+                    wallet = await selector.wallet();
+                    accountId = state.accounts[0].accountId;
+                    updateWalletUI(accountId);
+                    modal.hide();
+                    subscription.unsubscribe();
+                }
+            });
+        }
+
+        function connectWebSocket() {
+            ws = new WebSocket(`${WS_URL}/ws?session_id=${sessionId}`);
+
+            ws.onopen = () => {
+                console.log('WebSocket connected');
+            };
+
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                console.log('WebSocket message:', data);
+
+                if (data.type === 'captcha_challenge') {
+                    currentChallengeId = data.challenge_id;
+                    showCaptcha();
+                }
+            };
+
+            ws.onclose = () => {
+                console.log('WebSocket closed. Reconnecting...');
+                setTimeout(connectWebSocket, 2000);
+            };
+
+            ws.onerror = (error) => {
+                console.error('WebSocket error:', error);
+            };
+        }
+
+        function showStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = type;
+        }
+
+        function showCaptcha() {
+            // Reset and show modal
+            document.getElementById('captchaModal').classList.add('active');
+            document.getElementById('submitCaptchaBtn').disabled = true;
+
+            // Render hCaptcha widget
+            if (hcaptchaWidgetId !== null) {
+                hcaptcha.reset(hcaptchaWidgetId);
+            } else {
+                hcaptchaWidgetId = hcaptcha.render('hcaptcha-widget', {
+                    sitekey: hcaptchaSiteKey,
+                    callback: onCaptchaSuccess,
+                    'error-callback': onCaptchaError,
+                    'expired-callback': onCaptchaExpired
+                });
+            }
+        }
+
+        function onCaptchaSuccess(token) {
+            // Enable submit button when CAPTCHA is solved
+            document.getElementById('submitCaptchaBtn').disabled = false;
+        }
+
+        function onCaptchaError() {
+            showStatus('❌ CAPTCHA error. Please try again.', 'error');
+        }
+
+        function onCaptchaExpired() {
+            document.getElementById('submitCaptchaBtn').disabled = true;
+        }
+
+        async function buyTokens() {
+            const amount = document.getElementById('amount').value;
+
+            if (!accountId) {
+                showStatus('Please connect your wallet first', 'error');
+                return;
+            }
+
+            if (!sessionId) {
+                showStatus('Session not initialized', 'error');
+                return;
+            }
+
+            if (!wallet) {
+                showStatus('Wallet not connected', 'error');
+                return;
+            }
+
+            document.getElementById('buyBtn').disabled = true;
+            showStatus(`Initiating token purchase for ${amount} NEAR...`, 'info');
+
+            try {
+                // Calculate total deposit (purchase amount + OutLayer fee)
+                const purchaseAmount = parseFloat(amount);
+                const outlayerFee = 0.1; // 0.1 NEAR for OutLayer execution
+                const totalDeposit = purchaseAmount + outlayerFee;
+
+                // Call smart contract via wallet
+                const result = await wallet.signAndSendTransaction({
+                    signerId: accountId,
+                    receiverId: contractId,
+                    actions: [{
+                        type: 'FunctionCall',
+                        params: {
+                            methodName: 'buy_tokens',
+                            args: { session_id: sessionId },
+                            gas: '300000000000000', // 300 TGas
+                            deposit: (totalDeposit * 1e24).toString() // Convert to yoctoNEAR
+                        }
+                    }]
+                });
+
+                console.log('Transaction result:', result);
+                showStatus(`✅ Transaction sent! Waiting for CAPTCHA challenge...`, 'info');
+
+                // Transaction sent, now wait for CAPTCHA (will come via WebSocket)
+
+            } catch (error) {
+                console.error('Transaction error:', error);
+                showStatus('Error: ' + error.message, 'error');
+                document.getElementById('buyBtn').disabled = false;
+            }
+        }
+
+        async function submitCaptcha() {
+            // Get hCaptcha response token
+            const hcaptchaToken = hcaptcha.getResponse(hcaptchaWidgetId);
+
+            if (!hcaptchaToken) {
+                alert('Please complete the CAPTCHA');
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_URL}/api/captcha/solve/${currentChallengeId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ hcaptcha_token: hcaptchaToken })
+                });
+
+                const data = await res.json();
+
+                document.getElementById('captchaModal').classList.remove('active');
+
+                if (data.verified) {
+                    showStatus('✅ CAPTCHA verified! Token purchase will complete shortly.', 'success');
+                } else {
+                    showStatus('❌ CAPTCHA verification failed. Transaction cancelled.', 'error');
+                }
+
+                document.getElementById('buyBtn').disabled = false;
+
+            } catch (error) {
+                showStatus('Error submitting CAPTCHA: ' + error.message, 'error');
+                document.getElementById('captchaModal').classList.remove('active');
+                document.getElementById('buyBtn').disabled = false;
+            }
+        }
+
+        // Initialize on load
+        init();
+    </script>
+</body>
+</html>
