@@ -95,53 +95,61 @@ fn verify_captcha(input: &Input) -> Result<(bool, Option<String>), Box<dyn std::
 
     let challenge: ChallengeResponse = challenge_response.json()?;
 
-    // Step 2: Poll for user's CAPTCHA solution (with timeout)
-    let max_attempts = 60; // 30 seconds (500ms * 60)
-    let verify_url = format!("{}/api/captcha/verify/{}", input.launchpad_url, challenge.challenge_id);
+    // Step 2: Long-polling for user's CAPTCHA solution
+    // Instead of polling every 500ms, make ONE request with 60 second timeout
+    // Backend will hold the connection open until user solves or timeout
+    let wait_url = format!("{}/api/captcha/wait/{}?timeout=60", input.launchpad_url, challenge.challenge_id);
 
-    for attempt in 0..max_attempts {
-        // Wait before polling
-        std::thread::sleep(Duration::from_millis(500));
+    eprintln!("⏳ Waiting for user to solve CAPTCHA (60s timeout)...");
 
-        let verify_response = client.get(&verify_url).send()?;
+    let verify_response = client
+        .get(&wait_url)
+        .timeout(Duration::from_secs(65)) // Slightly longer than backend timeout
+        .send()?;
 
-        if !verify_response.status().is_success() {
-            continue; // Retry on error
-        }
-
-        let verify: VerifyResponse = verify_response.json()?;
-
-        match verify.status.as_str() {
-            "solved" => {
-                // User submitted answer
-                if verify.verified {
-                    // Correct answer
-                    return Ok((true, None));
-                } else {
-                    // Wrong answer - FAIL IMMEDIATELY
-                    return Ok((false, Some("wrong_answer".to_string())));
-                }
-            }
-            "timeout" => {
-                // Backend timeout (user didn't submit in time)
-                return Ok((false, Some("timeout".to_string())));
-            }
-            "pending" => {
-                // Continue polling
-                if attempt == max_attempts - 1 {
-                    // Worker polling timeout
-                    return Ok((false, Some("timeout".to_string())));
-                }
-            }
-            _ => {
-                // Unknown status
-                return Ok((false, Some("system_error".to_string())));
-            }
-        }
+    if !verify_response.status().is_success() {
+        return Err(format!("Failed to get verification result: HTTP {}", verify_response.status()).into());
     }
 
-    // Timeout after all attempts
-    Ok((false, Some("timeout".to_string())))
+    let verify: VerifyResponse = verify_response.json()?;
+
+    match verify.status.as_str() {
+        "solved" => {
+            if verify.verified {
+                eprintln!("✅ CAPTCHA verified successfully!");
+                return Ok((true, None));
+            } else {
+                eprintln!("❌ CAPTCHA verification failed (wrong answer)");
+                return Ok((false, Some("wrong_answer".to_string())));
+            }
+        }
+        "timeout" => {
+            eprintln!("⏱️  CAPTCHA timeout - user didn't solve in time");
+            return Ok((false, Some("timeout".to_string())));
+        }
+        "pending" => {
+            // Long-polling timed out but challenge still pending
+            // Retry once more
+            eprintln!("⏳ Long-poll timeout, checking one more time...");
+            std::thread::sleep(Duration::from_millis(500));
+
+            let retry_url = format!("{}/api/captcha/verify/{}", input.launchpad_url, challenge.challenge_id);
+            let retry_response = client.get(&retry_url).send()?;
+
+            if retry_response.status().is_success() {
+                let retry_verify: VerifyResponse = retry_response.json()?;
+                if retry_verify.status == "solved" {
+                    return Ok((retry_verify.verified, if !retry_verify.verified { Some("wrong_answer".to_string()) } else { None }));
+                }
+            }
+
+            return Ok((false, Some("timeout".to_string())));
+        }
+        _ => {
+            eprintln!("❌ Unknown status: {}", verify.status);
+            return Ok((false, Some("system_error".to_string())));
+        }
+    }
 }
 
 // WASM stub - for compilation only

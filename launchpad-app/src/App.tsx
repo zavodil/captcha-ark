@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { setupWalletSelector } from '@near-wallet-selector/core';
 import { setupMyNearWallet } from '@near-wallet-selector/my-near-wallet';
 import { setupModal } from '@near-wallet-selector/modal-ui';
 import type { WalletSelector, AccountState } from '@near-wallet-selector/core';
-import { transactions, utils } from 'near-api-js';
+import { transactions } from 'near-api-js';
 import '@near-wallet-selector/modal-ui/styles.css';
 import './App.css';
 
@@ -20,10 +20,15 @@ interface SessionData {
   network: string;
 }
 
+// Generate random session ID
+const generateSessionId = () => {
+  return 'sess_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+};
+
 function App() {
   const [selector, setSelector] = useState<WalletSelector | null>(null);
   const [accountId, setAccountId] = useState<string | null>(null);
-  const [sessionId, setSessionId] = useState<string>('');
+  const [sessionId, setSessionId] = useState<string>(generateSessionId());
   const contractId = process.env.REACT_APP_CONTRACT_ID || 'tokensale.testnet';
   const network = process.env.REACT_APP_NEAR_NETWORK || 'testnet';
   const apiBaseUrl = process.env.REACT_APP_API_BASE_URL || 'https://launchpad.nearspace.info/api';
@@ -42,7 +47,7 @@ function App() {
     ? 'ws://localhost:3181'
     : `wss://${window.location.host}`;
 
-  // Initialize session and wallet
+  // Initialize wallet on mount
   useEffect(() => {
     initSession();
   }, []);
@@ -70,16 +75,14 @@ function App() {
 
   const initSession = async () => {
     try {
-      const res = await fetch(`${API_URL}/api/session`, { credentials: 'include' });
-      const data: SessionData = await res.json();
-      setSessionId(data.session_id);
-      setHcaptchaSiteKey(data.hcaptcha_site_key);
-
-      // Initialize wallet selector with env network
+      // Initialize wallet selector
       await initWalletSelector(network);
+
+      // hCaptcha site key from env or default test key
+      setHcaptchaSiteKey(process.env.REACT_APP_HCAPTCHA_SITE_KEY || '10000000-ffff-ffff-ffff-000000000001');
     } catch (error) {
       console.error('Failed to initialize:', error);
-      setStatus({ message: 'Failed to initialize session', type: 'error' });
+      setStatus({ message: 'Failed to initialize wallet', type: 'error' });
     }
   };
 
@@ -107,11 +110,17 @@ function App() {
     });
   };
 
-  const connectWebSocket = () => {
+  const connectWebSocket = useCallback(() => {
+    if (!sessionId) {
+      console.log('No session ID yet, skipping WebSocket connection');
+      return;
+    }
+
     const websocket = new WebSocket(`${WS_URL}/ws?session_id=${sessionId}`);
 
     websocket.onopen = () => {
-      console.log('WebSocket connected');
+      console.log('WebSocket connected for session:', sessionId);
+      setStatus({ message: 'Connected! Waiting for CAPTCHA challenge...', type: 'info' });
     };
 
     websocket.onmessage = (event) => {
@@ -119,22 +128,25 @@ function App() {
       console.log('WebSocket message:', data);
 
       if (data.type === 'captcha_challenge') {
+        console.log('Received CAPTCHA challenge:', data.challenge_id);
         setCurrentChallengeId(data.challenge_id);
         setShowCaptchaModal(true);
+        setStatus({ message: 'CAPTCHA challenge received! Please solve it.', type: 'info' });
       }
     };
 
     websocket.onclose = () => {
-      console.log('WebSocket closed. Reconnecting...');
-      setTimeout(connectWebSocket, 2000);
+      console.log('WebSocket closed');
+      setStatus({ message: 'Connection closed', type: 'warning' });
     };
 
     websocket.onerror = (error) => {
       console.error('WebSocket error:', error);
+      setStatus({ message: 'WebSocket connection error', type: 'error' });
     };
 
     setWs(websocket);
-  };
+  }, [sessionId, WS_URL]);
 
   const renderHCaptcha = () => {
     if (!window.hcaptcha) {
@@ -195,6 +207,9 @@ function App() {
       const outlayerFee = 0.1;
       const totalDeposit = purchaseAmount + outlayerFee;
 
+      // Convert NEAR to yoctoNEAR (1 NEAR = 10^24 yoctoNEAR)
+      const depositYocto = BigInt(Math.floor(totalDeposit * 1e24));
+
       await wallet.signAndSendTransaction({
         signerId: accountId,
         receiverId: contractId,
@@ -203,12 +218,13 @@ function App() {
             'buy_tokens',
             { session_id: sessionId },
             BigInt('300000000000000'),
-            BigInt(utils.format.parseNearAmount(totalDeposit.toString())!)
+            depositYocto
           ),
         ],
       });
 
-      setStatus({ message: 'Transaction sent! Waiting for CAPTCHA...', type: 'info' });
+      setStatus({ message: 'Transaction sent! Waiting for CAPTCHA challenge...', type: 'info' });
+      // WebSocket is already connected, worker will send challenge
     } catch (error: any) {
       console.error('Transaction error:', error);
       setStatus({ message: `Error: ${error.message}`, type: 'error' });
@@ -258,10 +274,30 @@ function App() {
             <div className="stat-label">Price</div>
             <div className="stat-value">100 tokens/NEAR</div>
           </div>
-          <div className="stat-box">
-            <div className="stat-label">Your Session</div>
-            <div className="stat-value">{sessionId ? sessionId.substring(0, 8) + '...' : 'Loading...'}</div>
+        </div>
+
+        <div className="input-group">
+          <label htmlFor="session-id">Your Session ID</label>
+          <div style={{ display: 'flex', gap: '10px' }}>
+            <input
+              type="text"
+              id="session-id"
+              value={sessionId}
+              onChange={(e) => setSessionId(e.target.value)}
+              style={{ flex: 1 }}
+              placeholder="sess_..."
+            />
+            <button
+              className="btn btn-green"
+              onClick={() => setSessionId(generateSessionId())}
+              style={{ whiteSpace: 'nowrap' }}
+            >
+              🎲 New
+            </button>
           </div>
+          <small style={{ color: '#999', fontSize: '12px' }}>
+            Session ID is used to match your transaction with CAPTCHA. Keep it unique per purchase.
+          </small>
         </div>
 
         <div className="input-group">

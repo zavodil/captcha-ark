@@ -110,15 +110,6 @@ async function verifyHCaptchaToken(token, remoteip) {
     }
 }
 
-// API: Get session ID and contract configuration
-app.get('/api/session', (req, res) => {
-    res.json({
-        session_id: req.sessionID,
-        hcaptcha_site_key: HCAPTCHA_SITE_KEY,
-        contract_id: TOKEN_SALE_CONTRACT_ID,
-        network: NEAR_NETWORK
-    });
-});
 
 // API: Create CAPTCHA challenge
 app.post('/api/captcha/challenge', (req, res) => {
@@ -164,26 +155,56 @@ app.post('/api/captcha/challenge', (req, res) => {
     res.json({ challenge_id });
 });
 
-// API: Verify challenge (polled by OutLayer worker)
-app.get('/api/captcha/verify/:challenge_id', (req, res) => {
+// API: Long-polling for worker - wait for challenge result
+app.get('/api/captcha/wait/:challenge_id', (req, res) => {
     const { challenge_id } = req.params;
+    const timeout = parseInt(req.query.timeout) || 60; // Default 60 seconds
+    const maxTimeout = Math.min(timeout, 120); // Max 120 seconds
+
     const challenge = pendingChallenges.get(challenge_id);
 
     if (!challenge) {
         return res.status(404).json({ error: 'Challenge not found' });
     }
 
-    // Check timeout (40 seconds)
-    const elapsed = Date.now() - challenge.created_at;
-    if (elapsed > 40000) {
-        pendingChallenges.delete(challenge_id);
-        return res.json({ status: 'timeout', verified: false });
-    }
+    const startTime = Date.now();
+    const checkInterval = 500; // Check every 500ms
 
-    res.json({
-        status: challenge.status,
-        verified: challenge.verified
-    });
+    const checkStatus = () => {
+        const elapsed = (Date.now() - startTime) / 1000;
+        const challengeAge = (Date.now() - challenge.created_at) / 1000;
+
+        // Check if challenge was solved
+        if (challenge.status === 'solved') {
+            pendingChallenges.delete(challenge_id);
+            return res.json({
+                status: 'solved',
+                verified: challenge.verified
+            });
+        }
+
+        // Check if challenge timed out (60 seconds from creation)
+        if (challengeAge > 60) {
+            pendingChallenges.delete(challenge_id);
+            return res.json({
+                status: 'timeout',
+                verified: false
+            });
+        }
+
+        // Check if long-polling timed out
+        if (elapsed >= maxTimeout) {
+            return res.json({
+                status: 'pending',
+                verified: false
+            });
+        }
+
+        // Continue polling
+        setTimeout(checkStatus, checkInterval);
+    };
+
+    checkStatus();
 });
 
 // API: Submit hCaptcha token (from user's browser)
