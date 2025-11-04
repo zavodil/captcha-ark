@@ -36,10 +36,10 @@ function App() {
 
   const API_URL = window.location.hostname === 'localhost'
     ? 'http://localhost:3181'
-    : apiBaseUrl;
+    : 'https://api-launchpad.nearspace.info';
   const WS_URL = window.location.hostname === 'localhost'
     ? 'ws://localhost:3181'
-    : `wss://${window.location.host}`;
+    : 'wss://api-launchpad.nearspace.info';
 
   // Initialize wallet on mount
   useEffect(() => {
