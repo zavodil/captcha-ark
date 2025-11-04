@@ -1,6 +1,7 @@
 use near_sdk::borsh::{BorshDeserialize, BorshSerialize};
 use near_sdk::json_types::U128;
 use near_sdk::serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 use near_sdk::{env, ext_contract, log, near_bindgen, AccountId, Gas, NearToken, Promise, PromiseError};
 
 /// Minimum purchase amount
@@ -45,14 +46,12 @@ trait ExtSelf {
 }
 
 /// CAPTCHA verification response from WASM
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, JsonSchema, Debug)]
 #[serde(crate = "near_sdk::serde")]
 pub struct CaptchaResponse {
     pub verified: bool,
     pub session_id: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub error: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub error_type: Option<String>, // "timeout", "wrong_answer", "network_error", "system_error"
 }
 
@@ -194,7 +193,7 @@ impl TokenSaleContract {
         match result {
             // Success case: We received Some(CaptchaResponse)
             Ok(Some(response)) if response.verified => {
-                log!("✅ CAPTCHA verified for {}: {:?}", buyer, response);
+                log!("✅ CAPTCHA verified for {}: {:?}", buyer, response.verified);
 
                 // Calculate tokens to issue
                 let tokens_amount =

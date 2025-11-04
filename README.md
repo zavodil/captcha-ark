@@ -54,14 +54,27 @@ WASM module that verifies CAPTCHA by communicating with launchpad API.
 }
 ```
 
-**Output**:
+**Output (Success)**:
 ```json
 {
   "verified": true,
   "session_id": "abc123",
-  "error": null
+  "error": null,
+  "error_type": null
 }
 ```
+
+**Output (Failure)**:
+```json
+{
+  "verified": false,
+  "session_id": "abc123",
+  "error": "CAPTCHA verification failed",
+  "error_type": "wrong_answer"  // or "timeout", "network_error", "system_error"
+}
+```
+
+**Error handling**: Worker **immediately returns** on wrong answer or timeout. Contract **automatically refunds** buyer on any failure. See [ERROR_HANDLING.md](ERROR_HANDLING.md) for details.
 
 ### 2. Token Sale Contract
 
