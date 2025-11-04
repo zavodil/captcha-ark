@@ -193,8 +193,8 @@
         <!-- Wallet Connection -->
         <div class="input-group">
             <label>Wallet Connection</label>
-            <button class="btn" id="connectBtn" onclick="connectWallet()" style="background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);">
-                <span id="walletStatus">Connect Wallet</span>
+            <button class="btn" id="connectBtn" onclick="connectWallet()" disabled style="background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);">
+                <span id="walletStatus">Loading wallet...</span>
             </button>
         </div>
 
@@ -266,9 +266,27 @@
 
         // Initialize NEAR Wallet Selector
         async function initWalletSelector() {
+            // Wait for libraries to load
+            let attempts = 0;
+            while (attempts < 50) { // Max 5 seconds
+                if (window['@near-wallet-selector/core'] &&
+                    window['@near-wallet-selector/my-near-wallet'] &&
+                    window['@near-wallet-selector/modal-ui']) {
+                    break;
+                }
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
+            }
+
+            if (!window['@near-wallet-selector/core']) {
+                console.error('Failed to load NEAR Wallet Selector libraries');
+                showStatus('Failed to load wallet libraries. Please refresh the page.', 'error');
+                document.getElementById('walletStatus').textContent = 'Wallet Error';
+                return;
+            }
+
             const { setupWalletSelector } = window['@near-wallet-selector/core'];
             const { setupMyNearWallet } = window['@near-wallet-selector/my-near-wallet'];
-            const { setupModal } = window['@near-wallet-selector/modal-ui'];
 
             selector = await setupWalletSelector({
                 network: nearNetwork,
@@ -283,7 +301,15 @@
                 if (accounts.length > 0) {
                     accountId = accounts[0].accountId;
                     updateWalletUI(accountId);
+                } else {
+                    // Enable connect button
+                    document.getElementById('connectBtn').disabled = false;
+                    document.getElementById('walletStatus').textContent = 'Connect Wallet';
                 }
+            } else {
+                // Enable connect button
+                document.getElementById('connectBtn').disabled = false;
+                document.getElementById('walletStatus').textContent = 'Connect Wallet';
             }
         }
 
@@ -293,6 +319,11 @@
         }
 
         async function connectWallet() {
+            if (!selector) {
+                showStatus('Wallet not initialized yet. Please wait...', 'error');
+                return;
+            }
+
             if (accountId) {
                 // Already connected, disconnect
                 if (wallet) {
@@ -301,6 +332,12 @@
                     document.getElementById('walletStatus').textContent = 'Connect Wallet';
                     document.getElementById('buyBtn').disabled = true;
                 }
+                return;
+            }
+
+            // Check if modal library loaded
+            if (!window['@near-wallet-selector/modal-ui']) {
+                showStatus('Wallet modal not loaded. Please refresh the page.', 'error');
                 return;
             }
 
