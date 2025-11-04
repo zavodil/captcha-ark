@@ -14,7 +14,8 @@
     "express-session": "^1.17.3",
     "ws": "^8.14.2",
     "uuid": "^9.0.1",
-    "node-fetch": "^3.3.2"
+    "node-fetch": "^3.3.2",
+    "dotenv": "^16.3.1"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
