@@ -446,7 +446,32 @@ if (!session || session.account_id !== buyer) {
 }
 ```
 
-### 2. Rate Limiting
+### 2. Worker Authentication
+
+**CRITICAL:** Backend must verify that CAPTCHA challenge requests come from authorized OutLayer workers only. Without this, attackers can spam your backend with fake challenge requests.
+
+```javascript
+// Example: API key authentication
+const WORKER_API_KEY = process.env.WORKER_API_KEY; // Store securely
+
+app.post('/api/captcha/challenge', (req, res) => {
+    const apiKey = req.headers['x-api-key'];
+
+    if (!apiKey || apiKey !== WORKER_API_KEY) {
+        return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // Continue with challenge creation...
+});
+```
+
+**Options for worker authentication:**
+1. **API Key:** Shared secret between worker and backend (simplest for MVP)
+2. **JWT tokens:** Backend issues short-lived tokens to verified workers
+3. **IP Whitelist:** Allow requests only from known worker IPs
+4. **Request signing:** Worker signs requests with private key, backend verifies with public key
+
+### 3. Rate Limiting
 
 Add rate limiting to prevent abuse:
 
@@ -459,7 +484,7 @@ app.use('/api/captcha/', rateLimit({
 }));
 ```
 
-### 3. Timeout Handling
+### 4. Timeout Handling
 
 Worker times out after 40 seconds. Backend cleans up after 60 seconds:
 
@@ -474,7 +499,7 @@ setInterval(() => {
 }, 60000);
 ```
 
-### 4. HTTPS in Production
+### 5. HTTPS in Production
 
 Use HTTPS for all communication in production:
 
