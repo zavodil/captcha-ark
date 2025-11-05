@@ -270,12 +270,22 @@ function App() {
 
       setShowCaptchaModal(false);
 
+      console.log('CAPTCHA verification result:', data);
+
       // Small delay to ensure UI updates properly
       await new Promise(resolve => setTimeout(resolve, 100));
 
       if (data.verified) {
-        setStatus({ message: '✅ CAPTCHA verified! Token purchase completed successfully.', type: 'success' });
+        console.log('✅ CAPTCHA verified! Waiting for blockchain confirmation...');
+        setStatus({ message: '✅ CAPTCHA verified! Waiting for blockchain confirmation...', type: 'info' });
+
+        // Wait for transaction to finalize on blockchain (~3-5 seconds)
+        await new Promise(resolve => setTimeout(resolve, 5000));
+
+        console.log('✅ Token purchase completed successfully!');
+        setStatus({ message: '✅ Token purchase completed successfully!', type: 'success' });
       } else {
+        console.log('❌ CAPTCHA verification failed');
         setStatus({ message: '❌ CAPTCHA verification failed. Transaction has been cancelled and your funds have been refunded.', type: 'error' });
       }
 
