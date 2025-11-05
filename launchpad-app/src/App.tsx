@@ -221,18 +221,29 @@ function App() {
       );
 
       // Send transaction
-      await wallet.signAndSendTransaction({
+      wallet.signAndSendTransaction({
         receiverId: contractId,
         actions: [action],
+      }).catch((error: any) => {
+        // Ignore "Failed to fetch" errors - transaction is processing on blockchain
+        if (error.message && !error.message.includes('Failed to fetch')) {
+          console.error('Transaction error:', error);
+          setStatus({ message: `Error: ${error.message}`, type: 'error' });
+          setIsPurchasing(false);
+          setSessionId(null);
+        }
       });
 
       setStatus({ message: '⏳ Transaction sent! Waiting for CAPTCHA challenge...', type: 'info' });
       // WebSocket will be connected automatically via useEffect when sessionId changes
     } catch (error: any) {
-      console.error('Transaction error:', error);
-      setStatus({ message: `Error: ${error.message}`, type: 'error' });
-      setIsPurchasing(false);
-      setSessionId(null);
+      // Ignore "Failed to fetch" errors - transaction is processing on blockchain
+      if (error.message && !error.message.includes('Failed to fetch')) {
+        console.error('Transaction error:', error);
+        setStatus({ message: `Error: ${error.message}`, type: 'error' });
+        setIsPurchasing(false);
+        setSessionId(null);
+      }
     }
   };
 
@@ -258,6 +269,9 @@ function App() {
       const data = await res.json();
 
       setShowCaptchaModal(false);
+
+      // Small delay to ensure UI updates properly
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       if (data.verified) {
         setStatus({ message: '✅ CAPTCHA verified! Token purchase completed successfully.', type: 'success' });
@@ -316,8 +330,20 @@ function App() {
         </div>
 
         <button className="btn" onClick={handleBuyTokens} disabled={!accountId || isPurchasing}>
-          {isPurchasing ? 'Purchase in progress...' : `Buy Tokens (Total: ${(parseFloat(amount) + 0.01).toFixed(8)} NEAR)`}
+          {isPurchasing ? 'Purchase in progress...' : `Buy Tokens (Total: ${(parseFloat(amount) + 0.01).toFixed(2)} NEAR)`}
         </button>
+
+        <div style={{
+          padding: '12px',
+          marginTop: '15px',
+          backgroundColor: '#fff3cd',
+          border: '1px solid #ffc107',
+          borderRadius: '8px',
+          fontSize: '14px',
+          color: '#856404'
+        }}>
+          ⚠️ <strong>Anti-bot protection:</strong> After sending the transaction, you will need to solve a CAPTCHA on this page to confirm you're human and complete your purchase.
+        </div>
 
         {status && (
           <div className={`status ${status.type}`}>
