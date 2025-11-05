@@ -21,7 +21,7 @@ const app = express();
 const PORT = process.env.PORT || 3181;
 
 // NEAR contract configuration
-const TOKEN_SALE_CONTRACT_ID = process.env.TOKEN_SALE_CONTRACT_ID || 'tokensale.testnet';
+const TOKEN_SALE_CONTRACT_ID = process.env.TOKEN_SALE_CONTRACT_ID || 'capturedlaunchpad.testnet';
 const NEAR_NETWORK = process.env.NEAR_NETWORK || 'testnet';
 
 // hCaptcha configuration

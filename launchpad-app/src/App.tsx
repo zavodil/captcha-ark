@@ -22,17 +22,17 @@ const generateSessionId = () => {
 function App() {
   const [selector, setSelector] = useState<WalletSelector | null>(null);
   const [accountId, setAccountId] = useState<string | null>(null);
-  const [sessionId] = useState<string>(generateSessionId());
+  const [sessionId, setSessionId] = useState<string | null>(null); // Changed: now state, not constant
   const contractId = process.env.REACT_APP_CONTRACT_ID || 'tokensale.testnet';
   const network = process.env.REACT_APP_NEAR_NETWORK || 'testnet';
-  const apiBaseUrl = process.env.REACT_APP_API_BASE_URL || 'https://launchpad.nearspace.info/api';
   const [hcaptchaSiteKey, setHcaptchaSiteKey] = useState<string>('');
-  const [amount, setAmount] = useState<string>('0.0000001');
+  const [amount, setAmount] = useState<string>('0.1');
   const [status, setStatus] = useState<{ message: string; type: string } | null>(null);
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [currentChallengeId, setCurrentChallengeId] = useState<string | null>(null);
   const [showCaptchaModal, setShowCaptchaModal] = useState(false);
   const [hcaptchaWidgetId, setHcaptchaWidgetId] = useState<string | null>(null);
+  const [isPurchasing, setIsPurchasing] = useState(false); // Track if purchase is in progress
 
   const API_URL = window.location.hostname === 'localhost'
     ? 'http://localhost:3181'
@@ -114,7 +114,6 @@ function App() {
 
     websocket.onopen = () => {
       console.log('WebSocket connected for session:', sessionId);
-      setStatus({ message: 'Connected! Waiting for CAPTCHA challenge...', type: 'info' });
     };
 
     websocket.onmessage = (event) => {
@@ -125,18 +124,16 @@ function App() {
         console.log('Received CAPTCHA challenge:', data.challenge_id);
         setCurrentChallengeId(data.challenge_id);
         setShowCaptchaModal(true);
-        setStatus({ message: 'CAPTCHA challenge received! Please solve it.', type: 'info' });
+        setStatus({ message: '🔒 Please solve the CAPTCHA to complete your purchase', type: 'info' });
       }
     };
 
     websocket.onclose = () => {
       console.log('WebSocket closed');
-      setStatus({ message: 'Connection closed', type: 'warning' });
     };
 
     websocket.onerror = (error) => {
       console.error('WebSocket error:', error);
-      setStatus({ message: 'WebSocket connection error', type: 'error' });
     };
 
     setWs(websocket);
@@ -193,18 +190,32 @@ function App() {
       return;
     }
 
+    if (isPurchasing) {
+      setStatus({ message: 'Purchase already in progress. Please wait...', type: 'warning' });
+      return;
+    }
+
+    const purchaseAmount = parseFloat(amount);
+    if (purchaseAmount < 0.1) {
+      setStatus({ message: 'Minimum purchase amount is 0.1 NEAR', type: 'error' });
+      return;
+    }
+
     try {
+      // Generate new session ID for this purchase
+      const newSessionId = generateSessionId();
+      setSessionId(newSessionId);
+      setIsPurchasing(true);
       setStatus({ message: 'Preparing transaction...', type: 'info' });
 
       const wallet = await selector.wallet();
-      const purchaseAmount = parseFloat(amount);
-      const outlayerFee = 0.11; // 0.11 NEAR for OutLayer execution
+      const outlayerFee = 0.01; // 0.01 NEAR for OutLayer execution (unused amount will be refunded)
       const totalDeposit = purchaseAmount + outlayerFee;
 
       // Create action using actionCreators (same as dashboard)
       const action = actionCreators.functionCall(
         'buy_tokens',
-        { session_id: sessionId },
+        { session_id: newSessionId },
         BigInt('300000000000000'), // 300 TGas
         BigInt(Math.floor(totalDeposit * 1e24)) // deposit in yoctoNEAR
       );
@@ -215,11 +226,13 @@ function App() {
         actions: [action],
       });
 
-      setStatus({ message: 'Transaction sent! Waiting for CAPTCHA challenge...', type: 'info' });
-      // WebSocket is already connected, worker will send challenge
+      setStatus({ message: '⏳ Transaction sent! Waiting for CAPTCHA challenge...', type: 'info' });
+      // WebSocket will be connected automatically via useEffect when sessionId changes
     } catch (error: any) {
       console.error('Transaction error:', error);
       setStatus({ message: `Error: ${error.message}`, type: 'error' });
+      setIsPurchasing(false);
+      setSessionId(null);
     }
   };
 
@@ -234,6 +247,8 @@ function App() {
     }
 
     try {
+      setStatus({ message: '⏳ Verifying CAPTCHA...', type: 'info' });
+
       const res = await fetch(`${API_URL}/api/captcha/solve/${currentChallengeId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -245,13 +260,21 @@ function App() {
       setShowCaptchaModal(false);
 
       if (data.verified) {
-        setStatus({ message: '✅ CAPTCHA verified! Purchase complete.', type: 'success' });
+        setStatus({ message: '✅ CAPTCHA verified! Token purchase completed successfully.', type: 'success' });
       } else {
-        setStatus({ message: '❌ CAPTCHA failed. Transaction cancelled.', type: 'error' });
+        setStatus({ message: '❌ CAPTCHA verification failed. Transaction has been cancelled and your funds have been refunded.', type: 'error' });
       }
+
+      // Reset state for next purchase
+      setIsPurchasing(false);
+      setSessionId(null);
+      setCurrentChallengeId(null);
+      setHcaptchaWidgetId(null);
     } catch (error: any) {
       setStatus({ message: `Error: ${error.message}`, type: 'error' });
       setShowCaptchaModal(false);
+      setIsPurchasing(false);
+      setSessionId(null);
     }
   };
 
@@ -283,16 +306,17 @@ function App() {
             id="amount"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
-            min="0.0000001"
-            step="0.0000001"
+            min="0.1"
+            step="0.1"
+            disabled={isPurchasing}
           />
           <small style={{ color: '#999', fontSize: '12px', marginTop: '5px' }}>
-            + 0.11 NEAR for OutLayer execution fee (refunded if CAPTCHA fails)
+            Minimum: 0.1 NEAR. + 0.01 NEAR for OutLayer execution (unused amount will be refunded)
           </small>
         </div>
 
-        <button className="btn" onClick={handleBuyTokens} disabled={!accountId}>
-          Buy Tokens (Total: {(parseFloat(amount) + 0.11).toFixed(8)} NEAR)
+        <button className="btn" onClick={handleBuyTokens} disabled={!accountId || isPurchasing}>
+          {isPurchasing ? 'Purchase in progress...' : `Buy Tokens (Total: ${(parseFloat(amount) + 0.01).toFixed(8)} NEAR)`}
         </button>
 
         {status && (
@@ -307,7 +331,7 @@ function App() {
         <div className="modal active">
           <div className="modal-content">
             <h2>🔒 Verify You're Human</h2>
-            <p>Complete the CAPTCHA to continue with your token purchase.</p>
+            <p>Complete the CAPTCHA to finalize your token purchase.</p>
             <div className="captcha-container">
               <div id="hcaptcha-container"></div>
             </div>

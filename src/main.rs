@@ -133,7 +133,13 @@ fn verify_captcha(input: &Input) -> Result<(bool, Option<String>), Box<dyn std::
 
     // Parse response
     let verify_body = verify_response.body()?;
+
+    // Debug: log raw response
+    eprintln!("📥 Raw verify response: {}", String::from_utf8_lossy(&verify_body));
+
     let verify_data: VerifyResponse = serde_json::from_slice(&verify_body)?;
+
+    eprintln!("📊 Parsed verify response: status={}, verified={}", verify_data.status, verify_data.verified);
 
     match verify_data.status.as_str() {
         "solved" => {
