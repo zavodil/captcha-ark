@@ -131,12 +131,24 @@ Single-page application with NEAR Wallet integration and hCaptcha.
 - Rust toolchain with `wasm32-wasip2` target
 - Node.js 18+
 - NEAR CLI
-- Running OutLayer coordinator (optional for local testing)
+- hCaptcha account (free at [hcaptcha.com](https://www.hcaptcha.com/))
+- Web server with SSL (for production)
+- Running OutLayer coordinator
+
+### High-Level Setup
+
+1. **Build WASI Worker** - Compiles to WASM for off-chain CAPTCHA verification
+2. **Deploy Smart Contract** - Token sale logic on NEAR blockchain
+3. **Start Backend Server** - Handles CAPTCHA challenges and WebSocket
+4. **Build & Deploy Frontend** - User interface for token purchase
+5. **Configure Networking** - Set up domains and SSL certificates
+
+See [CONFIGURATION.md](CONFIGURATION.md) for detailed setup instructions.
 
 ### 1. Build WASI Worker
 
 ```bash
-cd wasi-examples/captcha-ark
+cd captcha-ark
 
 # Add WASM target
 rustup target add wasm32-wasip2
@@ -145,6 +157,9 @@ rustup target add wasm32-wasip2
 cargo build --target wasm32-wasip2 --release
 
 # Output: target/wasm32-wasip2/release/captcha-ark.wasm (~459KB)
+
+# Push to GitHub (worker will be compiled by OutLayer)
+git push origin main
 ```
 
 ### 2. Deploy Token Sale Contract
@@ -155,14 +170,14 @@ cd token-sale-contract
 # Build contract
 cargo near build
 
-# Deploy to testnet
+# Deploy to testnet with your launchpad backend URL
 near contract deploy tokensale.testnet \
   use-file target/near/token_sale_contract/token_sale_contract.wasm \
   with-init-call new \
   json-args '{
     "owner": "your-account.testnet",
     "total_supply": "10000",
-    "launchpad_url": "http://localhost:3001"
+    "launchpad_url": "https://api-launchpad.your domain.com"
   }' \
   prepaid-gas '100.0 Tgas' \
   attached-deposit '0 NEAR' \
@@ -171,45 +186,72 @@ near contract deploy tokensale.testnet \
   send
 ```
 
-### 3. Start Launchpad Backend
+### 3. Configure & Start Backend
 
 ```bash
 cd launchpad-backend
 
+# Install dependencies (including dotenv)
+npm install dotenv
+
+# Create .env file with your hCaptcha keys
+cat > .env <<EOF
+PORT=3181
+HCAPTCHA_SITE_KEY=your_site_key_from_hcaptcha
+HCAPTCHA_SECRET=your_secret_from_hcaptcha
+ALLOWED_ORIGINS=https://launchpad.yourdomain.com
+SESSION_SECRET=$(openssl rand -base64 32)
+EOF
+
+# Start server
+npm start
+
+# Server runs on http://localhost:3181
+# WebSocket available at ws://localhost:3181/ws
+```
+
+**Important**: Backend requires `dotenv` package and `import 'dotenv/config';` at the top of `server.js`.
+
+### 4. Build & Deploy Frontend
+
+```bash
+cd launchpad-app
+
 # Install dependencies
 npm install
 
-# Start server (default port: 3181)
-npm start
+# Create .env file
+cat > .env <<EOF
+REACT_APP_CONTRACT_ID=tokensale.testnet
+REACT_APP_NEAR_NETWORK=testnet
+REACT_APP_HCAPTCHA_SITE_KEY=your_site_key_from_hcaptcha
+EOF
 
-# Server running on http://localhost:3181
-# WebSocket on ws://localhost:3181/ws
+# Build production app
+npm run build
 
-# Or set custom port:
-PORT=3181 npm start
+# Deploy build/ folder to your web server
+# Frontend should be accessible at: https://launchpad.yourdomain.com
 ```
 
-### 4. Open Launchpad Frontend
+### 5. Production Deployment
 
-```bash
-cd launchpad-frontend
+For production deployment, you need:
 
-# Serve with any HTTP server
-python3 -m http.server 8000
+1. **Two domains with SSL**:
+   - `launchpad.yourdomain.com` - Frontend (serves React app)
+   - `api-launchpad.yourdomain.com` - Backend (Node.js server + WebSocket)
 
-# Open http://localhost:8000
-```
+2. **Web server configuration** (nginx/Apache):
+   - Frontend: Serve static files from `launchpad-app/build/`
+   - Backend: Reverse proxy to Node.js on port 3181
+   - WebSocket: Proxy `/ws` path with Upgrade headers
 
-### 5. Push WASI Worker to GitHub
+3. **hCaptcha dashboard**:
+   - Add both domains to allowed domains list
+   - Copy Site Key and Secret to `.env` files
 
-```bash
-# Push your code to public GitHub repository
-git init
-git add .
-git commit -m "Add captcha-ark WASI worker"
-git remote add origin https://github.com/your-username/captcha-ark
-git push -u origin main
-```
+See [CONFIGURATION.md](CONFIGURATION.md) for complete production setup guide.
 
 ## 🧪 Testing the Flow
 
