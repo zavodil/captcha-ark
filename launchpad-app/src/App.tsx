@@ -394,25 +394,40 @@ function App() {
                 marginBottom: '20px',
                 textAlign: 'left'
               }}>
-                <p style={{ margin: '0 0 10px 0', fontSize: '15px', fontWeight: 'bold', color: '#2c5282' }}>
-                  📋 Purchase Request Details
-                </p>
-                <p style={{ margin: '5px 0', fontSize: '14px' }}>
-                  <strong>Account:</strong> <code style={{ backgroundColor: '#e8f4f8', padding: '2px 6px', borderRadius: '4px' }}>{purchaseDetails.buyer}</code>
-                </p>
-                <p style={{ margin: '5px 0', fontSize: '14px' }}>
-                  <strong>Amount:</strong> <span style={{ color: '#4a90e2', fontWeight: 'bold' }}>{purchaseDetails.amount} NEAR</span>
-                </p>
-                <p style={{ margin: '5px 0', fontSize: '13px', color: '#666', wordBreak: 'break-all' }}>
-                  <strong>Transaction:</strong> <code style={{ fontSize: '11px', backgroundColor: '#f5f5f5', padding: '2px 4px', borderRadius: '3px' }}>{purchaseDetails.transaction_hash}</code>
-                </p>
-                <p style={{ margin: '5px 0', fontSize: '13px', color: '#666' }}>
-                  <strong>Request ID:</strong> <code style={{ fontSize: '11px', backgroundColor: '#f5f5f5', padding: '2px 4px', borderRadius: '3px' }}>{purchaseDetails.session_id}</code>
-                </p>
-                <hr style={{ margin: '12px 0', border: 'none', borderTop: '1px solid #d0e8f5' }} />
                 <p style={{ margin: '0', fontSize: '13px', color: '#666' }}>
                   ℹ️ <strong>We received your purchase request for {purchaseDetails.amount} NEAR{purchaseDetails.transaction_hash && purchaseDetails.transaction_hash !== 'unknown' ? ` in transaction ${purchaseDetails.transaction_hash.substring(0, 8)}...` : ''}.</strong> To confirm you are a human and complete this transaction, please solve the CAPTCHA below.
                 </p>
+                <button
+                  onClick={() => setShowDetails(!showDetails)}
+                  style={{
+                    marginTop: '10px',
+                    background: 'none',
+                    border: 'none',
+                    color: '#4a90e2',
+                    cursor: 'pointer',
+                    fontSize: '12px',
+                    textDecoration: 'underline',
+                    padding: 0
+                  }}
+                >
+                  {showDetails ? '▼ Hide Details' : '▶ Show Details'}
+                </button>
+                {showDetails && (
+                  <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #d0e8f5' }}>
+                    <p style={{ margin: '5px 0', fontSize: '13px' }}>
+                      <strong>Account:</strong> <code style={{ backgroundColor: '#ffffff', padding: '2px 6px', borderRadius: '4px', fontSize: '11px' }}>{purchaseDetails.buyer}</code>
+                    </p>
+                    <p style={{ margin: '5px 0', fontSize: '13px' }}>
+                      <strong>Amount:</strong> <span style={{ color: '#4a90e2', fontWeight: 'bold' }}>{purchaseDetails.amount} NEAR</span>
+                    </p>
+                    <p style={{ margin: '5px 0', fontSize: '13px', color: '#666', wordBreak: 'break-all' }}>
+                      <strong>Transaction:</strong> <code style={{ fontSize: '11px', backgroundColor: '#ffffff', padding: '2px 4px', borderRadius: '3px' }}>{purchaseDetails.transaction_hash}</code>
+                    </p>
+                    <p style={{ margin: '5px 0', fontSize: '13px', color: '#666' }}>
+                      <strong>Request ID:</strong> <code style={{ fontSize: '11px', backgroundColor: '#ffffff', padding: '2px 4px', borderRadius: '3px' }}>{purchaseDetails.session_id}</code>
+                    </p>
+                  </div>
+                )}
               </div>
             )}
             <div className="captcha-container">
