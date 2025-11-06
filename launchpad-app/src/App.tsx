@@ -4,6 +4,7 @@ import { setupMyNearWallet } from '@near-wallet-selector/my-near-wallet';
 import { setupModal } from '@near-wallet-selector/modal-ui';
 import type { WalletSelector, AccountState } from '@near-wallet-selector/core';
 import { actionCreators } from '@near-js/transactions';
+import confetti from 'canvas-confetti';
 import '@near-wallet-selector/modal-ui/styles.css';
 import './App.css';
 
@@ -291,6 +292,13 @@ function App() {
 
         console.log('✅ Token purchase completed successfully!');
         setStatus({ message: '✅ Token purchase completed successfully!', type: 'success' });
+
+        // Launch confetti!
+        confetti({
+          particleCount: 100,
+          spread: 70,
+          origin: { y: 0.6 }
+        });
       } else {
         console.log('❌ CAPTCHA verification failed');
         setStatus({ message: '❌ CAPTCHA verification failed. Transaction has been cancelled and your funds have been refunded.', type: 'error' });
@@ -350,17 +358,19 @@ function App() {
           {isPurchasing ? 'Purchase in progress...' : `Buy Tokens (Total: ${(parseFloat(amount) + 0.01).toFixed(2)} NEAR)`}
         </button>
 
-        <div style={{
-          padding: '12px',
-          marginTop: '15px',
-          backgroundColor: '#fff3cd',
-          border: '1px solid #ffc107',
-          borderRadius: '8px',
-          fontSize: '14px',
-          color: '#856404'
-        }}>
-          ⚠️ <strong>Anti-bot protection:</strong> After sending the transaction, you will need to solve a CAPTCHA on this page to confirm you're human and complete your purchase.
-        </div>
+        {status?.type !== 'success' && (
+          <div style={{
+            padding: '12px',
+            marginTop: '15px',
+            backgroundColor: '#fff3cd',
+            border: '1px solid #ffc107',
+            borderRadius: '8px',
+            fontSize: '14px',
+            color: '#856404'
+          }}>
+            ⚠️ <strong>Anti-bot protection:</strong> After sending the transaction, you will need to solve a CAPTCHA on this page to confirm you're human and complete your purchase.
+          </div>
+        )}
 
         {status && (
           <div className={`status ${status.type}`}>
@@ -400,7 +410,7 @@ function App() {
                 </p>
                 <hr style={{ margin: '12px 0', border: 'none', borderTop: '1px solid #d0e8f5' }} />
                 <p style={{ margin: '0', fontSize: '13px', color: '#666' }}>
-                  ℹ️ <strong>We received your purchase request for {purchaseDetails.amount} NEAR in transaction {purchaseDetails.transaction_hash.substring(0, 8)}...</strong> To confirm you are a human and complete this transaction, please solve the CAPTCHA below.
+                  ℹ️ <strong>We received your purchase request for {purchaseDetails.amount} NEAR{purchaseDetails.transaction_hash && purchaseDetails.transaction_hash !== 'unknown' ? ` in transaction ${purchaseDetails.transaction_hash.substring(0, 8)}...` : ''}.</strong> To confirm you are a human and complete this transaction, please solve the CAPTCHA below.
                 </p>
               </div>
             )}
