@@ -352,7 +352,7 @@ function App() {
             step="0.1"
             disabled={isPurchasing}
           />
-          <small style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '12px', marginTop: '8px', display: 'block' }}>
+          <small style={{ color: '#9ca3af', fontSize: '12px', marginTop: '6px', display: 'block' }}>
             Minimum: 0.1 NEAR + 0.01 NEAR for OutLayer execution (unused amount refunded)
           </small>
         </div>
@@ -363,13 +363,13 @@ function App() {
 
         {status?.type !== 'success' && (
           <div style={{
-            padding: '16px 18px',
-            marginTop: '20px',
-            backgroundColor: 'rgba(251, 191, 36, 0.1)',
-            border: '1px solid rgba(251, 191, 36, 0.3)',
-            borderRadius: '12px',
+            padding: '14px 16px',
+            marginTop: '16px',
+            backgroundColor: '#fef3c7',
+            border: '1px solid #fcd34d',
+            borderRadius: '8px',
             fontSize: '14px',
-            color: '#fcd34d',
+            color: '#92400e',
             lineHeight: '1.6'
           }}>
             ⚠️ <strong>Anti-bot protection:</strong> After sending the transaction, you will need to solve a CAPTCHA on this page to confirm you're human and complete your purchase.
@@ -390,14 +390,14 @@ function App() {
             <h2>🔒 Verify You're Human</h2>
             {purchaseDetails && (
               <div style={{
-                backgroundColor: 'rgba(102, 126, 234, 0.1)',
-                border: '1px solid rgba(102, 126, 234, 0.3)',
-                borderRadius: '12px',
+                backgroundColor: '#eff6ff',
+                border: '1px solid #bfdbfe',
+                borderRadius: '8px',
                 padding: '16px',
                 marginBottom: '24px',
                 textAlign: 'left'
               }}>
-                <p style={{ margin: '0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.9)', lineHeight: '1.5' }}>
+                <p style={{ margin: '0', fontSize: '14px', color: '#374151', lineHeight: '1.5' }}>
                   ℹ️ <strong>We received your purchase request for {purchaseDetails.amount} NEAR{purchaseDetails.transaction_hash && purchaseDetails.transaction_hash !== 'unknown' ? ` in transaction ${purchaseDetails.transaction_hash.substring(0, 8)}...` : ''}.</strong> To confirm you are a human and complete this transaction, please solve the CAPTCHA below.
                 </p>
                 <button
@@ -406,7 +406,7 @@ function App() {
                     marginTop: '12px',
                     background: 'none',
                     border: 'none',
-                    color: '#93c5fd',
+                    color: '#6366f1',
                     cursor: 'pointer',
                     fontSize: '12px',
                     textDecoration: 'underline',
@@ -416,18 +416,18 @@ function App() {
                   {showDetails ? '▼ Hide Details' : '▶ Show Details'}
                 </button>
                 {showDetails && (
-                  <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
-                    <p style={{ margin: '8px 0', fontSize: '13px', color: 'rgba(255, 255, 255, 0.8)' }}>
-                      <strong>Account:</strong> <code style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', color: '#93c5fd' }}>{purchaseDetails.buyer}</code>
+                  <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid #d1d5db' }}>
+                    <p style={{ margin: '8px 0', fontSize: '13px', color: '#374151' }}>
+                      <strong>Account:</strong> <code style={{ backgroundColor: '#f3f4f6', padding: '3px 8px', borderRadius: '4px', fontSize: '11px', color: '#111827' }}>{purchaseDetails.buyer}</code>
                     </p>
-                    <p style={{ margin: '8px 0', fontSize: '13px', color: 'rgba(255, 255, 255, 0.8)' }}>
-                      <strong>Amount:</strong> <span style={{ color: '#6ee7b7', fontWeight: 'bold' }}>{purchaseDetails.amount} NEAR</span>
+                    <p style={{ margin: '8px 0', fontSize: '13px', color: '#374151' }}>
+                      <strong>Amount:</strong> <span style={{ color: '#6366f1', fontWeight: 'bold' }}>{purchaseDetails.amount} NEAR</span>
                     </p>
-                    <p style={{ margin: '8px 0', fontSize: '13px', color: 'rgba(255, 255, 255, 0.8)', wordBreak: 'break-all' }}>
-                      <strong>Transaction:</strong> <code style={{ fontSize: '11px', backgroundColor: 'rgba(255, 255, 255, 0.1)', padding: '3px 6px', borderRadius: '6px', color: '#93c5fd' }}>{purchaseDetails.transaction_hash}</code>
+                    <p style={{ margin: '8px 0', fontSize: '13px', color: '#374151', wordBreak: 'break-all' }}>
+                      <strong>Transaction:</strong> <code style={{ fontSize: '11px', backgroundColor: '#f3f4f6', padding: '3px 6px', borderRadius: '4px', color: '#111827' }}>{purchaseDetails.transaction_hash}</code>
                     </p>
-                    <p style={{ margin: '8px 0', fontSize: '13px', color: 'rgba(255, 255, 255, 0.8)' }}>
-                      <strong>Request ID:</strong> <code style={{ fontSize: '11px', backgroundColor: 'rgba(255, 255, 255, 0.1)', padding: '3px 6px', borderRadius: '6px', color: '#93c5fd' }}>{purchaseDetails.session_id}</code>
+                    <p style={{ margin: '8px 0', fontSize: '13px', color: '#374151' }}>
+                      <strong>Request ID:</strong> <code style={{ fontSize: '11px', backgroundColor: '#f3f4f6', padding: '3px 6px', borderRadius: '4px', color: '#111827' }}>{purchaseDetails.session_id}</code>
                     </p>
                   </div>
                 )}
