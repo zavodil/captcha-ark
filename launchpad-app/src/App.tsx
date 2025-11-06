@@ -294,12 +294,14 @@ function App() {
         console.log('✅ Token purchase completed successfully!');
         setStatus({ message: '✅ Token purchase completed successfully!', type: 'success' });
 
-        // Launch confetti!
-        confetti({
-          particleCount: 100,
-          spread: 70,
-          origin: { y: 0.6 }
-        });
+        // Launch confetti after 2 seconds!
+        setTimeout(() => {
+          confetti({
+            particleCount: 100,
+            spread: 70,
+            origin: { y: 0.6 }
+          });
+        }, 2000);
       } else {
         console.log('❌ CAPTCHA verification failed');
         setStatus({ message: '❌ CAPTCHA verification failed. Transaction has been cancelled and your funds have been refunded.', type: 'error' });
@@ -350,8 +352,8 @@ function App() {
             step="0.1"
             disabled={isPurchasing}
           />
-          <small style={{ color: '#999', fontSize: '12px', marginTop: '5px' }}>
-            Minimum: 0.1 NEAR. + 0.01 NEAR for OutLayer execution (unused amount will be refunded)
+          <small style={{ color: 'rgba(255, 255, 255, 0.5)', fontSize: '12px', marginTop: '8px', display: 'block' }}>
+            Minimum: 0.1 NEAR + 0.01 NEAR for OutLayer execution (unused amount refunded)
           </small>
         </div>
 
@@ -361,13 +363,14 @@ function App() {
 
         {status?.type !== 'success' && (
           <div style={{
-            padding: '12px',
-            marginTop: '15px',
-            backgroundColor: '#fff3cd',
-            border: '1px solid #ffc107',
-            borderRadius: '8px',
+            padding: '16px 18px',
+            marginTop: '20px',
+            backgroundColor: 'rgba(251, 191, 36, 0.1)',
+            border: '1px solid rgba(251, 191, 36, 0.3)',
+            borderRadius: '12px',
             fontSize: '14px',
-            color: '#856404'
+            color: '#fcd34d',
+            lineHeight: '1.6'
           }}>
             ⚠️ <strong>Anti-bot protection:</strong> After sending the transaction, you will need to solve a CAPTCHA on this page to confirm you're human and complete your purchase.
           </div>
@@ -387,23 +390,23 @@ function App() {
             <h2>🔒 Verify You're Human</h2>
             {purchaseDetails && (
               <div style={{
-                backgroundColor: '#f0f8ff',
-                border: '1px solid #4a90e2',
-                borderRadius: '8px',
-                padding: '15px',
-                marginBottom: '20px',
+                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                border: '1px solid rgba(102, 126, 234, 0.3)',
+                borderRadius: '12px',
+                padding: '16px',
+                marginBottom: '24px',
                 textAlign: 'left'
               }}>
-                <p style={{ margin: '0', fontSize: '13px', color: '#666' }}>
+                <p style={{ margin: '0', fontSize: '14px', color: 'rgba(255, 255, 255, 0.9)', lineHeight: '1.5' }}>
                   ℹ️ <strong>We received your purchase request for {purchaseDetails.amount} NEAR{purchaseDetails.transaction_hash && purchaseDetails.transaction_hash !== 'unknown' ? ` in transaction ${purchaseDetails.transaction_hash.substring(0, 8)}...` : ''}.</strong> To confirm you are a human and complete this transaction, please solve the CAPTCHA below.
                 </p>
                 <button
                   onClick={() => setShowDetails(!showDetails)}
                   style={{
-                    marginTop: '10px',
+                    marginTop: '12px',
                     background: 'none',
                     border: 'none',
-                    color: '#4a90e2',
+                    color: '#93c5fd',
                     cursor: 'pointer',
                     fontSize: '12px',
                     textDecoration: 'underline',
@@ -413,18 +416,18 @@ function App() {
                   {showDetails ? '▼ Hide Details' : '▶ Show Details'}
                 </button>
                 {showDetails && (
-                  <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #d0e8f5' }}>
-                    <p style={{ margin: '5px 0', fontSize: '13px' }}>
-                      <strong>Account:</strong> <code style={{ backgroundColor: '#ffffff', padding: '2px 6px', borderRadius: '4px', fontSize: '11px' }}>{purchaseDetails.buyer}</code>
+                  <div style={{ marginTop: '12px', paddingTop: '12px', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                    <p style={{ margin: '8px 0', fontSize: '13px', color: 'rgba(255, 255, 255, 0.8)' }}>
+                      <strong>Account:</strong> <code style={{ backgroundColor: 'rgba(255, 255, 255, 0.1)', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', color: '#93c5fd' }}>{purchaseDetails.buyer}</code>
                     </p>
-                    <p style={{ margin: '5px 0', fontSize: '13px' }}>
-                      <strong>Amount:</strong> <span style={{ color: '#4a90e2', fontWeight: 'bold' }}>{purchaseDetails.amount} NEAR</span>
+                    <p style={{ margin: '8px 0', fontSize: '13px', color: 'rgba(255, 255, 255, 0.8)' }}>
+                      <strong>Amount:</strong> <span style={{ color: '#6ee7b7', fontWeight: 'bold' }}>{purchaseDetails.amount} NEAR</span>
                     </p>
-                    <p style={{ margin: '5px 0', fontSize: '13px', color: '#666', wordBreak: 'break-all' }}>
-                      <strong>Transaction:</strong> <code style={{ fontSize: '11px', backgroundColor: '#ffffff', padding: '2px 4px', borderRadius: '3px' }}>{purchaseDetails.transaction_hash}</code>
+                    <p style={{ margin: '8px 0', fontSize: '13px', color: 'rgba(255, 255, 255, 0.8)', wordBreak: 'break-all' }}>
+                      <strong>Transaction:</strong> <code style={{ fontSize: '11px', backgroundColor: 'rgba(255, 255, 255, 0.1)', padding: '3px 6px', borderRadius: '6px', color: '#93c5fd' }}>{purchaseDetails.transaction_hash}</code>
                     </p>
-                    <p style={{ margin: '5px 0', fontSize: '13px', color: '#666' }}>
-                      <strong>Request ID:</strong> <code style={{ fontSize: '11px', backgroundColor: '#ffffff', padding: '2px 4px', borderRadius: '3px' }}>{purchaseDetails.session_id}</code>
+                    <p style={{ margin: '8px 0', fontSize: '13px', color: 'rgba(255, 255, 255, 0.8)' }}>
+                      <strong>Request ID:</strong> <code style={{ fontSize: '11px', backgroundColor: 'rgba(255, 255, 255, 0.1)', padding: '3px 6px', borderRadius: '6px', color: '#93c5fd' }}>{purchaseDetails.session_id}</code>
                     </p>
                   </div>
                 )}
