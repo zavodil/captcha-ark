@@ -35,6 +35,7 @@ function App() {
   const [hcaptchaWidgetId, setHcaptchaWidgetId] = useState<string | null>(null);
   const [isPurchasing, setIsPurchasing] = useState(false); // Track if purchase is in progress
   const [purchaseDetails, setPurchaseDetails] = useState<{buyer: string, amount: string, session_id: string, transaction_hash: string} | null>(null);
+  const [showDetails, setShowDetails] = useState(false); // Toggle for details visibility
 
   const API_URL = window.location.hostname === 'localhost'
     ? 'http://localhost:3181'
@@ -242,7 +243,7 @@ function App() {
         }
       });
 
-      setStatus({ message: '⏳ Transaction sent! Waiting for CAPTCHA challenge...', type: 'info' });
+      setStatus({ message: '⏳ Please sign the transaction in your wallet, then return here to verify CAPTCHA.', type: 'info' });
       // WebSocket will be connected automatically via useEffect when sessionId changes
     } catch (error: any) {
       // Ignore "Failed to fetch" errors - transaction is processing on blockchain
@@ -402,7 +403,7 @@ function App() {
                 <p style={{ margin: '5px 0', fontSize: '14px' }}>
                   <strong>Amount:</strong> <span style={{ color: '#4a90e2', fontWeight: 'bold' }}>{purchaseDetails.amount} NEAR</span>
                 </p>
-                <p style={{ margin: '5px 0', fontSize: '13px', color: '#666' }}>
+                <p style={{ margin: '5px 0', fontSize: '13px', color: '#666', wordBreak: 'break-all' }}>
                   <strong>Transaction:</strong> <code style={{ fontSize: '11px', backgroundColor: '#f5f5f5', padding: '2px 4px', borderRadius: '3px' }}>{purchaseDetails.transaction_hash}</code>
                 </p>
                 <p style={{ margin: '5px 0', fontSize: '13px', color: '#666' }}>
