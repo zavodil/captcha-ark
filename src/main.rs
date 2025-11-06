@@ -39,8 +39,14 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let input: Input = serde_json::from_str(&input_string)?;
 
+    // Read transaction hash from environment (if available)
+    let transaction_hash = std::env::var("NEAR_TRANSACTION_HASH")
+        .unwrap_or_else(|_| "unknown".to_string());
+
+    eprintln!("🔍 Transaction hash: {}", transaction_hash);
+
     // Execute CAPTCHA verification flow
-    let (verified, error, error_type) = match verify_captcha(&input) {
+    let (verified, error, error_type) = match verify_captcha(&input, &transaction_hash) {
         Ok((v, et)) => (v, None, et),
         Err(e) => {
             // Return error in output
@@ -70,14 +76,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn verify_captcha(input: &Input) -> Result<(bool, Option<String>), Box<dyn std::error::Error>> {
+fn verify_captcha(input: &Input, transaction_hash: &str) -> Result<(bool, Option<String>), Box<dyn std::error::Error>> {
     // Step 1: Request CAPTCHA challenge from launchpad
     let challenge_url = format!("{}/api/captcha/challenge", input.launchpad_url);
 
     let challenge_body = serde_json::json!({
         "session_id": input.session_id,
         "buyer": input.buyer,
-        "amount": input.amount
+        "amount": input.amount,
+        "transaction_hash": transaction_hash
     });
 
     eprintln!("📤 Creating CAPTCHA challenge...");

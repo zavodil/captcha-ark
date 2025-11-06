@@ -134,7 +134,7 @@ async function verifyHCaptchaToken(token, remoteip) {
 
 // API: Create CAPTCHA challenge
 app.post('/api/captcha/challenge', (req, res) => {
-    const { session_id, buyer, amount } = req.body;
+    const { session_id, buyer, amount, transaction_hash } = req.body;
 
     if (!session_id) {
         return res.status(400).json({ error: 'session_id is required' });
@@ -147,6 +147,7 @@ app.post('/api/captcha/challenge', (req, res) => {
         session_id,
         buyer,
         amount,
+        transaction_hash,
         status: 'pending',
         verified: false,
         created_at: Date.now()
@@ -155,20 +156,25 @@ app.post('/api/captcha/challenge', (req, res) => {
     pendingChallenges.set(challenge_id, challenge);
 
     console.log(`📝 hCaptcha challenge created: ${challenge_id} for session ${session_id}`);
-    console.log(`   Buyer: ${buyer}, Amount: ${amount}`);
+    console.log(`   Buyer: ${buyer}, Amount: ${amount}, TX: ${transaction_hash || 'unknown'}`);
 
     // Send to user's browser via WebSocket
     const ws = wsConnections.get(session_id);
     if (ws && ws.readyState === ws.OPEN) {
+        // Format amount for display (convert from yoctoNEAR string to NEAR)
+        const amountInNear = amount ? (parseFloat(amount) / 1e24).toFixed(4) : '0';
+
         ws.send(JSON.stringify({
             type: 'captcha_challenge',
             challenge_id,
             buyer,
-            amount,
+            amount: amountInNear,
+            amount_yocto: amount,
+            transaction_hash: transaction_hash || 'unknown',
             captcha_type: 'hcaptcha',
             site_key: HCAPTCHA_SITE_KEY
         }));
-        console.log(`   ✅ Sent to WebSocket`);
+        console.log(`   ✅ Sent to WebSocket (amount: ${amountInNear} NEAR, tx: ${transaction_hash})`);
     } else {
         console.log(`   ⚠️  No WebSocket connection for session ${session_id}`);
     }

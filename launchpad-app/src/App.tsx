@@ -33,6 +33,7 @@ function App() {
   const [showCaptchaModal, setShowCaptchaModal] = useState(false);
   const [hcaptchaWidgetId, setHcaptchaWidgetId] = useState<string | null>(null);
   const [isPurchasing, setIsPurchasing] = useState(false); // Track if purchase is in progress
+  const [purchaseDetails, setPurchaseDetails] = useState<{buyer: string, amount: string, session_id: string, transaction_hash: string} | null>(null);
 
   const API_URL = window.location.hostname === 'localhost'
     ? 'http://localhost:3181'
@@ -123,6 +124,12 @@ function App() {
       if (data.type === 'captcha_challenge') {
         console.log('Received CAPTCHA challenge:', data.challenge_id);
         setCurrentChallengeId(data.challenge_id);
+        setPurchaseDetails({
+          buyer: data.buyer,
+          amount: data.amount,
+          session_id: sessionId || 'unknown',
+          transaction_hash: data.transaction_hash || 'unknown'
+        });
         setShowCaptchaModal(true);
         setStatus({ message: '🔒 Please solve the CAPTCHA to complete your purchase', type: 'info' });
       }
@@ -367,7 +374,36 @@ function App() {
         <div className="modal active">
           <div className="modal-content">
             <h2>🔒 Verify You're Human</h2>
-            <p>Complete the CAPTCHA to finalize your token purchase.</p>
+            {purchaseDetails && (
+              <div style={{
+                backgroundColor: '#f0f8ff',
+                border: '1px solid #4a90e2',
+                borderRadius: '8px',
+                padding: '15px',
+                marginBottom: '20px',
+                textAlign: 'left'
+              }}>
+                <p style={{ margin: '0 0 10px 0', fontSize: '15px', fontWeight: 'bold', color: '#2c5282' }}>
+                  📋 Purchase Request Details
+                </p>
+                <p style={{ margin: '5px 0', fontSize: '14px' }}>
+                  <strong>Account:</strong> <code style={{ backgroundColor: '#e8f4f8', padding: '2px 6px', borderRadius: '4px' }}>{purchaseDetails.buyer}</code>
+                </p>
+                <p style={{ margin: '5px 0', fontSize: '14px' }}>
+                  <strong>Amount:</strong> <span style={{ color: '#4a90e2', fontWeight: 'bold' }}>{purchaseDetails.amount} NEAR</span>
+                </p>
+                <p style={{ margin: '5px 0', fontSize: '13px', color: '#666' }}>
+                  <strong>Transaction:</strong> <code style={{ fontSize: '11px', backgroundColor: '#f5f5f5', padding: '2px 4px', borderRadius: '3px' }}>{purchaseDetails.transaction_hash}</code>
+                </p>
+                <p style={{ margin: '5px 0', fontSize: '13px', color: '#666' }}>
+                  <strong>Request ID:</strong> <code style={{ fontSize: '11px', backgroundColor: '#f5f5f5', padding: '2px 4px', borderRadius: '3px' }}>{purchaseDetails.session_id}</code>
+                </p>
+                <hr style={{ margin: '12px 0', border: 'none', borderTop: '1px solid #d0e8f5' }} />
+                <p style={{ margin: '0', fontSize: '13px', color: '#666' }}>
+                  ℹ️ <strong>We received your purchase request for {purchaseDetails.amount} NEAR in transaction {purchaseDetails.transaction_hash.substring(0, 8)}...</strong> To confirm you are a human and complete this transaction, please solve the CAPTCHA below.
+                </p>
+              </div>
+            )}
             <div className="captcha-container">
               <div id="hcaptcha-container"></div>
             </div>
